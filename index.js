@@ -1,13 +1,16 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
+const { exec } = require("child_process");
 
 async function waitFor(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function scrapeProduct(url, region) {
-  const browser = await puppeteer.launch({ headless: false });
+  const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
+
+  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
 
   page.on('console', msg => {
     console.log('Браузер:', msg.text());
@@ -113,7 +116,8 @@ for (let i = 0; i < liTexts.length; i++) {
     region
   );
 
-  await page.screenshot({ path: "screenshot.jpg", fullPage: true });
+  const screenshotPath = "screenshot.jpg"; 
+  await page.screenshot({ path: screenshotPath, fullPage: true });
 
   const productData = await page.evaluate(() => {
     const oldPriceElements = document.querySelector(
@@ -147,6 +151,15 @@ for (let i = 0; i < liTexts.length; i++) {
   fs.writeFileSync("product.txt", output);
 
   await browser.close();
+  const openCommand = process.platform === 'win32' ? `start ${screenshotPath}` : 
+                      process.platform === 'darwin' ? `open ${screenshotPath}` : 
+                      `xdg-open ${screenshotPath}`; // Для Linux
+  exec(openCommand, (err) => {
+    if (err) {
+      console.error("Ошибка при открытии скриншота:", err);
+    }
+  });
+
 }
 
 const [url, region] = process.argv.slice(2);
