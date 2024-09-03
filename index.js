@@ -1,79 +1,117 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 
+async function waitFor(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function scrapeProduct(url, region) {
   const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
 
-  await page.goto(url, { waitUntil: "networkidle2" });
+  page.on('console', msg => {
+    console.log('Браузер:', msg.text());
+  });
+
+  await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
   await page.setViewport({ width: 1280, height: 1024 });
 
-  // Ожидание, пока элемент с селектором .Region_regionIcon__oZ0Rt станет видимым
-  await page.waitForSelector('.Region_regionIcon__oZ0Rt', { visible: true });
+  await page.waitForSelector('.Region_regionIcon__oZ0Rt');
 
-  const foo = await page.evaluate(async (region) => {
-    function waitForModal(selector, timeout = 10000) {
-      return new Promise((resolve, reject) => {
-        const modalObserver = new MutationObserver(() => {
-          const modal = document.querySelector(selector);
-          if (modal) {
-            console.log('////////////////////////////////////', modal)
-            modalObserver.disconnect();
-            resolve(modal);
-          }
-        });
 
-        modalObserver.observe(document.body, { childList: true, subtree: true });
+  const isClickable = await page.evaluate(() => {
+      const element = document.querySelector('.Region_regionIcon__oZ0Rt');
+      return element && element.offsetParent !== null; 
+  });
 
-        // Установка таймаута
-        setTimeout(() => {
-          modalObserver.disconnect();
-          reject(new Error('Таймаут: модальное окно не появилось.'));
-        }, timeout);
-      });
-    }
-
-    // Использование функции ожидания
-    try {
-      const modal = await waitForModal('.Modal_modal__Pja4P');
-      console.log("Модальное окно появилось:", modal);
-      const liElements = document.querySelectorAll('.UiRegionListBase_list__cH0fK li');
-      console.log('///////////////', liElements)
-      let regionFound = false;
-      for (let li of liElements) {
-        const text = li.textContent.trim();
-        if (text === region) {
-          li.click();
-          regionFound = true;
-          break;
-        }
+  if (isClickable) {
+      await waitFor(3500); 
+      try {
+          // await page.click('.Region_regionIcon__oZ0Rt'),
+          await Promise.all([
+              page.click('.Region_regionIcon__oZ0Rt'),
+              page.waitForNavigation({ waitUntil: 'networkidle0' }),
+          ]);
+      } catch (error) {
+          console.error("Ошибка при клике или навигации:", error);
       }
+  } else {
+      console.error("Элемент перекрыт или не доступен для клика.");
+      await browser.close();
+      return;
+  }
 
-      if (!regionFound) {
-        console.error(`Регион "${region}" не найден.`);
-        return null; // Возвращаем null, если регион не найден
-      }
 
-      // Ожидание обновления региона на странице
-      const regionElement = document.querySelector('.Region_region__6OUBn');
-      if (regionElement && regionElement.innerText.includes(region)) {
-        console.log(`Регион "${region}" успешно выбран.`);
-        return region; // Возвращаем выбранный регион
-      } else {
-        console.error(`Регион "${region}" не обновился на странице.`);
-        return null; // Возвращаем null, если регион не обновился
-      }
-    } catch (error) {
-      console.error(error.message);
-      return null; // Возвращаем null, если произошла ошибка
-    }
-  }, region); // Передаем регион как аргумент
 
-  // Проверяем, был ли выбран регион
-  // if (foo === null) {
-  //   console.error("Не удалось выбрать регион. Завершение работы.");
-  //   return;
+  
+
+  // const regions = await Promise.all(liElements.map(async (li) => {
+  //   const text = await page.evaluate(el => el.innerText, li);
+  //   return { text: text.trim(), element: li };
+  // }));
+  
+  // let regionFound = false;
+  // for (const regionObj of regions) {
+  //   if (regionObj.text === region) {
+  //     await regionObj.element.click(); 
+  //     regionFound = true;
+  //     break;
+  //   }
   // }
+
+  // const liElements = await page.$$('.UiRegionListBase_list__cH0fK li', { visible: true });
+  // let regionFound = false;
+  // for (let li of liElements) {
+  //   const text = await page.evaluate(el => el.innerText, li);
+  //   console.log("///////////////////////////////////////////////", text, )
+  //   if (text.trim() === region) {
+  //     regionFound = true;
+  //     await li.click(); 
+  //     break;
+  //   }
+  // }
+
+//   const texts = await Promise.all(liElements.map(li => page.evaluate(el => el.innerText, li)));
+
+// let regionFound = false;
+// for (let i = 0; i < texts.length; i++) {
+//   if (texts[i].trim() === region) {
+//     await liElements[i].click(); 
+//     regionFound = true;
+//     break;
+//   }
+// }
+const getLiElements = async () => {
+  return await page.evaluate(() => {
+    const items = Array.from(document.querySelectorAll('.UiRegionListBase_list__cH0fK li'));
+    return items.map(item => item.innerText.trim()); 
+  });
+};
+
+const liTexts = await getLiElements(); // Получаем тексты всех li
+let regionFound = false;
+
+for (let i = 0; i < liTexts.length; i++) {
+  if (liTexts[i] === region) {
+    regionFound = true;
+    const li = await page.$$('.UiRegionListBase_list__cH0fK li'); 
+    await li[i].click(); 
+    console.log(`Кликнули по региону: ${region}`);
+    break;
+  }
+}
+
+  if (!regionFound) {
+    console.error(`Регион "${region}" не найден.`);
+    await browser.close();
+    return;
+  }
+
+  await page.waitForFunction(
+    (region) => document.querySelector('.Region_region__6OUBn').innerText.includes(region),
+    {},
+    region
+  );
 
   await page.screenshot({ path: "screenshot.jpg", fullPage: true });
 
@@ -104,66 +142,17 @@ async function scrapeProduct(url, region) {
     productData.oldPrice ? "Старая цена: " + productData.oldPrice + "\n" : ""
   }Цена: ${productData.price}\nРейтинг: ${productData.rating}\nОтзывы: ${
     productData.reviews
-  }\n`;
-
+  }
+  `;
   fs.writeFileSync("product.txt", output);
 
   await browser.close();
 }
 
-// Вызов функции scrapeProduct
 const [url, region] = process.argv.slice(2);
 if (!url || !region) {
   console.error("Необходимо указать URL и регион.");
   process.exit(1);
 }
 
-// Здесь вызываем функцию
 scrapeProduct(url, region).catch(console.error);
-
-
-
-const regionIcon = document.querySelector('.Region_regionIcon__oZ0Rt');
-regionIcon.click(); 
-
-// Функция для ожидания появления модального окна
-function waitForModal(selector, timeout = 10000) {
-  return new Promise((resolve, reject) => {
-    const modalObserver = new MutationObserver(() => {
-      const modal = document.querySelector(selector);
-      if (modal) {
-        modalObserver.disconnect();
-        resolve(modal);
-      }
-    });
-
-
-    modalObserver.observe(document.body, { childList: true, subtree: true });
-
-    // Установка таймаута
-    setTimeout(() => {
-      modalObserver.disconnect();
-      
-      reject(new Error('Таймаут: модальное окно не появилось.'));
-    }, timeout);
-  });
-}
-
-// Использование функции ожидания
-waitForModal('.Modal_modal__Pja4P')
-  .then(modal => {
-    const liElements = document.querySelectorAll('.UiRegionListBase_list__cH0fK li');
-
-      let regionFound = false;
-      for (let li of liElements) {
-        const text = li.textContent.trim();
-        if (text === region) {
-          li.click(); // Кликаем по элементу, если регион найден
-          regionFound = true;
-          break;
-        }
-      }
-  })
-  .catch(error => {
-    console.error(error.message);
-  });

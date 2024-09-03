@@ -12,7 +12,7 @@ async function captureScreen() {
         // Ждем, пока видео загрузится
         video.onloadedmetadata = () => {
             const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
+            canvas.width = video.videoWidth; 
             canvas.height = video.videoHeight;
 
             const context = canvas.getContext('2d');
