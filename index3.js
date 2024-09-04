@@ -126,3 +126,6 @@ if (!url || !region) {
 }
 
 scrapeProduct(url, region).catch(console.error);
+
+
+ 

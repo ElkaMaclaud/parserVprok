@@ -248,15 +248,24 @@ scrapeProduct(url, region).catch(console.error);
   //     break;
   //   }
   // }
-  
 
-  // const liElements = await page.$$('.UiRegionListBase_list__cH0fK li', { visible: true });
+  
+  // const getLiElements = async () => {
+  //   return await page.evaluate(() => {
+  //     const items = Array.from(
+  //       document.querySelectorAll(".UiRegionListBase_list__cH0fK li")
+  //     );
+  //     return items.map((item) => item.innerText.trim());
+  //   });
+  // };
+  // const liTexts = await getLiElements(); 
   // let regionFound = false;
-  // for (let li of liElements) {
-  //   const text = await page.evaluate(el => el.innerText, li);
-  //   if (text.trim() === region) {
+  // for (let i = 0; i < liTexts.length; i++) {
+  //   if (liTexts[i] === region) {
   //     regionFound = true;
-  //     await li.click();
+  //     const li = await page.$$(".UiRegionListBase_list__cH0fK li");
+  //     await li[i].click();
+  //     console.log(`Кликнули по региону: ${region}`);
   //     break;
   //   }
   // }

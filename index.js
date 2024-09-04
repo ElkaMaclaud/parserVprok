@@ -31,7 +31,7 @@ async function scrapeProduct(url, region) {
 
 
   if (isClickable) {
-    await waitFor(2500);
+    await waitFor(2000); // 2500
     try {
       await page.click(".Region_regionIcon__oZ0Rt");
     } catch (error) {
@@ -42,24 +42,14 @@ async function scrapeProduct(url, region) {
     await browser.close();
     return;
   }
-  const getLiElements = async () => {
-    return await page.evaluate(() => {
-      const items = Array.from(
-        document.querySelectorAll(".UiRegionListBase_list__cH0fK li")
-      );
-      return items.map((item) => item.innerText.trim());
-    });
-  };
 
-  const liTexts = await getLiElements(); 
+  const liElements = await page.$$('.UiRegionListBase_list__cH0fK li', { visible: true });
   let regionFound = false;
-
-  for (let i = 0; i < liTexts.length; i++) {
-    if (liTexts[i] === region) {
+  for (let li of liElements) {
+    const text = await page.evaluate(el => el.innerText, li);
+    if (text.trim() === region) {
       regionFound = true;
-      const li = await page.$$(".UiRegionListBase_list__cH0fK li");
-      await li[i].click();
-      console.log(`Кликнули по региону: ${region}`);
+      await li.click();
       break;
     }
   }
