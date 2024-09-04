@@ -20,9 +20,7 @@ async function scrapeProduct(url, region) {
   async function waitFor(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
-  //   const timeoutPromise = new Promise((_, reject) =>
-  //     setTimeout(() => reject(new Error("Timeout: элемент не найден")), 5000)
-  // );
+ 
 
   await page.waitForSelector(".Region_regionIcon__oZ0Rt", { visible: true });
 
@@ -30,25 +28,12 @@ async function scrapeProduct(url, region) {
     const element = document.querySelector(".Region_regionIcon__oZ0Rt");
     return element && element.offsetParent !== null;
   });
-  // await Promise.race([elementPromise, timeoutPromise]);
-  //   isClickable = await page.evaluate(() => {
-  //       const element = document.querySelector(".Region_regionIcon__oZ0Rt");
-  //       return element && element.offsetParent !== null;
-  //   });
+
 
   if (isClickable) {
     await waitFor(2500);
-    // await page.waitForSelector('.Region_regionIcon__oZ0Rt', { visible: true, timeout: 5000 });
     try {
-      //   await page.waitForFunction(selector => {
-      //     const element = document.querySelector(selector);
-      //     return element && element.offsetParent !== null;
-      // }, {}, ".Region_regionIcon__oZ0Rt");
       await page.click(".Region_regionIcon__oZ0Rt");
-      // await Promise.all([
-      //     page.click('.Region_regionIcon__oZ0Rt'),
-      //     page.waitForNavigation({ waitUntil: 'networkidle0' }),
-      // ]);
     } catch (error) {
       console.error("Ошибка при клике или навигации:", error);
     }
@@ -57,48 +42,6 @@ async function scrapeProduct(url, region) {
     await browser.close();
     return;
   }
-
-  // await page.waitForFunction(() => {
-  //   const element = document.querySelector('.SomeContentSelector');
-  //   return element !== null;
-  // }, { timeout: 10000 });
-
-  // const regions = await Promise.all(liElements.map(async (li) => {
-  //   const text = await page.evaluate(el => el.innerText, li);
-  //   return { text: text.trim(), element: li };
-  // }));
-
-  // let regionFound = false;
-  // for (const regionObj of regions) {
-  //   if (regionObj.text === region) {
-  //     await regionObj.element.click();
-  //     regionFound = true;
-  //     break;
-  //   }
-  // }
-  
-
-  // const liElements = await page.$$('.UiRegionListBase_list__cH0fK li', { visible: true });
-  // let regionFound = false;
-  // for (let li of liElements) {
-  //   const text = await page.evaluate(el => el.innerText, li);
-  //   if (text.trim() === region) {
-  //     regionFound = true;
-  //     await li.click();
-  //     break;
-  //   }
-  // }
-
-
-  //   const texts = await Promise.all(liElements.map(li => page.evaluate(el => el.innerText, li)));
-  // let regionFound = false;
-  // for (let i = 0; i < texts.length; i++) {
-  //   if (texts[i].trim() === region) {
-  //     await liElements[i].click();
-  //     regionFound = true;
-  //     break;
-  //   }
-  // }
   const getLiElements = async () => {
     return await page.evaluate(() => {
       const items = Array.from(
